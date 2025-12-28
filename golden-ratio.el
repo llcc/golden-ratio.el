@@ -171,14 +171,21 @@ will prevent the window to be resized to the golden ratio."
               golden-ratio-exclude-modes)))
 
 (defun golden-ratio-exclude-mode-or-file-in-one-window-p ()
-  "Returns non-nil if `major-mode' should not use golden-ratio."
-  (dolist (window (window-list))
-    (when (or (member (symbol-name (buffer-local-value 'major-mode (window-buffer window)))
-		              golden-ratio-exclude-modes)
-              (and golden-ratio-exclude-buffer-regexp
-                   (cl-loop for r in golden-ratio-exclude-buffer-regexp
-                            thereis (string-match r (buffer-name (window-buffer window))))))
-      (cl-return t))))
+  "Return non-nil if any visible window's buffer should be excluded from `golden-ratio'.
+
+Checks both `golden-ratio-exclude-modes' and `golden-ratio-exclude-buffer-regexp'."
+  (cl-some
+   (lambda (window)
+     (let* ((buffer (window-buffer window))
+            (mode (buffer-local-value 'major-mode buffer))
+            (name (buffer-name buffer)))
+       (or (and (boundp 'golden-ratio-exclude-modes)
+                (memq mode golden-ratio-exclude-modes))
+           (and (boundp 'golden-ratio-exclude-buffer-regexp)
+                (cl-some (lambda (r)
+                           (string-match-p r name))
+                         golden-ratio-exclude-buffer-regexp)))))
+   (window-list)))
 
 ;;;###autoload
 (defun golden-ratio (&optional arg)
